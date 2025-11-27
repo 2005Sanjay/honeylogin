@@ -1,132 +1,222 @@
-HoneyLogin – Simple SSH Honeypot
+🛡️ HoneyLogin — Advanced SSH Honeypot with Real-Time Attack Dashboard
 
-A lightweight, beginner-friendly SSH honeypot built using Python.
-It simulates a fake SSH server, logs attacker login attempts, and helps you understand brute-force behavior safely.
+A fully featured cybersecurity honeypot that captures attacker login attempts, performs GeoIP lookups, triggers email alerts, blocks malicious IPs, and displays everything inside a professional SOC-style dashboard with a real-time world attack map, charts, analytics, and export tools.
 
-🚀 Features:
+This project is designed to be beginner-friendly, powerful, and portfolio-ready.
 
-Fake SSH service running on port 2222
+🚀 Features
+🛡️ Honeypot Engine (SSH Fake Login)
 
-Logs:
+Runs on port 2222
+
+Accepts all credentials (fake login)
+
+Logs every attempt with:
+
+IP address
 
 Username
 
 Password
 
-Attacker IP
-
 Timestamp
 
-Python socket-based design
+GeoIP data (country, city, org, lat/lon)
 
-Easy to run locally or on a VPS
-
-Beginner friendly honeypot project
-
-
-Project Structure:
-
-honeylogin/
- ├── honeypot.py
- ├── logs/
- │    └── attempts.log
- └── README.md
-
-
-How HoneyLogin Works:
-
-Opens a TCP socket on port 2222
-
-Pretends to be an SSH server (SSH-2.0-OpenSSH_8.9)
-
-Asks for username and password
-
-Logs whatever the attacker enters
-
-Always returns Access denied
-
-This shows how attackers attempt brute-force logins in real life.
-
-🛠️ Installation:
-
-1. Clone this repository:
-
-git clone https://github.com/<your-username>/honeylogin.git
-cd honeylogin
-
-2. Create the logs folder:
-
-mkdir logs
-
-3. Run the honeypot:
-
-python3 honeypot.py
-
-
-You should see:
-
-[+] HoneyLogin is running on port 2222...
-
-
-🧪 Testing the Honeypot
-
-Open a second terminal:
-
-nc 127.0.0.1 2222
-
-
-You will see:
-SSH-2.0-OpenSSH_8.9
-username:
-
-
-Enter anything:
-
-admin
-123456
-
-
-📄 Log Output Example
-
-Logs are saved inside:
+All logs are stored in:
 logs/attempts.log
 
+🌍 Real-Time World Attack Map
+
+A full-width interactive global attack map powered by Leaflet.
+
+Features include:
+
+📍 Pin markers for attackers
+
+🔵 Bubble circles (size = number of attempts)
+
+🔥 Heatmap mode (toggle ON/OFF)
+
+🎯 Click on Top IP → Center map on attacker
+
+🌎 Country fallback (local/unknown IPs mapped to country centroid)
+
+🔄 Auto-refresh every 10 seconds
+
+Perfect SOC-style visualization.
+
+📊 Advanced SOC Dashboard
+
+Accessible at:
+http://127.0.0.1:5000/login
+
+Includes:
+
+✔ Charts
+
+Username distribution (Pie)
+
+Password frequency (Bar)
+
+Hourly attack timeline (Line)
+
+Country distribution
+
+✔ Stats
+
+Total attack attempts
+
+Top 5 IPs
+
+Top usernames
+
+Top passwords
+
+✔ Filters
+
+Search logs by:
+
+IP
+
+Country
+
+Username
+
+Limit results
+
+✔ Export tools
+
+Export CSV
+
+Export JSON
+
+Export Excel (XLSX)
+
+🔐 Dashboard Login
+
+Secure admin login using .env stored credentials:
+ADMIN_USER=Darkseid
+ADMIN_PASS=Darkseid28_2005!
+
+Session based, protected pages)
+📬 Email Alerts
+
+Instant email notifications when an attacker logs in.
+
+Format:
+🔥 Honeypot Alert!
+
+IP: 185.144.xx.xx
+Username: admin
+Password: 123456
+Country: Russia
+Org: AS35624
+
+Uses secure Gmail App Passwords (not real Gmail password).
+🚫 Automatic IP Blocking
+
+Using UFW:
+
+Detect attacker → block instantly
+
+Prevents repeated brute-forcing
+
+Every block is logged
 
 Example:
+[BLOCKER] Blocking IP: 185.14.28.9
+[BLOCKER] Blocked using UFW: 185.14.28.9
 
-[2025-11-22 17:14:10] 127.0.0.1 tried admin:123456
+🔐 Security (Secrets Hidden Using .env)
 
+Secrets like:
 
-⚠️ Security Notes
+Gmail address
 
-Do NOT run this on real SSH port (22)
+Gmail app password
 
-Do NOT use this in production systems
+Dashboard admin user/password
 
-Honeypots attract bots → use firewall rules
+are stored in:
+.env
 
-Education / research purpose only
+and never pushed to GitHub.
+.gitignore contains:
+.env
+venv/
+__pycache__/
 
-🎯 Future Enhancements
+This keeps your public repo 100% safe.
+🏗️ Project Structure
+honeylogin/
+│
+├── honeypot.py                 # Main SSH honeypot
+├── logs/
+│   └── attempts.log            # Captured attacks
+│
+├── dashboard/
+│   ├── app.py                  # Flask backend
+│   └── templates/
+│       ├── base.html
+│       ├── login.html
+│       └── dashboard.html      # UI + charts + map
+│
+├── .env                        # (Not included in repo)
+├── .gitignore
+└── README.md
 
-GeoIP lookup (attacker country)
+⚙️ Setup Instructions
+1. Clone the repo
+git clone https://github.com/2005Sanjay/honeylogin.git
+cd honeylogin
 
-Dashboard for viewing attempts
+🧪 Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-Alert system for repeated brute-force attempts
+🔐 Create .env file
+ALERT_EMAIL=yourgmail@gmail.com
+ALERT_EMAIL_PASS=your_gmail_app_password
 
-JSON formatted logs
+ADMIN_USER=Darkseid
+ADMIN_PASS=Darkseid28_2005!
 
-Statistics page
+📦 Install dependencies
+pip install -r dashboard/requirements.txt
+pip install python-dotenv requests pandas openpyxl
 
-IP blocking module
+🛡️ Run the Honeypot
+python3 honeypot.py
 
-🤝 Contributor
+Honeypot will start listening on port 2222.
 
-Sanjay M (Developer)
+📊 Run the Dashboard
+python3 dashboard/app.py
 
-📜 License
+Open in browser:
+http://127.0.0.1:5000/login
 
-MIT License
+🎯 Future Enhancements (Optional)
+
+You can extend this project with:
+
+Telegram alerts
+
+IP reputation lookup (AbuseIPDB API)
+
+Dark web monitoring
+
+Attacker behavior profiling
+
+Live attack feed (WebSocket)
+
+Cloud deployment (AWS, Railway, Render)
+
+SSH interaction recording (Cowrie-style)
+
+❤️ Developed by
+👤 Sanjay
+
 
 
