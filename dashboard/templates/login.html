@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card p-3">
+      <h4 class="mb-3 text-white">HoneyLogin — Dashboard Login</h4>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ 'success' if category=='success' else 'danger' }}">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post">
+        <div class="mb-2">
+          <label class="form-label small-muted">Username</label>
+          <input name="username" class="form-control" value="{{ request.form.username or '' }}" required>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label small-muted">Password</label>
+          <input name="password" type="password" class="form-control" required>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary">Login</button>
+        </div>
+      </form>
+
+      <div class="small-muted mt-3">
+        Default test credentials are provided by you (for local use only).
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

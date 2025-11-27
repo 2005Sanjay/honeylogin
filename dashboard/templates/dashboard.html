@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  /* small layout helper styles */
+  .hero-map {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(2,6,23,0.6);
+  }
+  .chart-card { min-height: 260px; }
+  .chart-small { height: 260px; }
+  .chart-wide { height: 300px; }
+  .map-legend {
+    position: absolute;
+    z-index: 4000;
+    right: 24px;
+    top: 18px;
+    background: rgba(2,6,23,0.6);
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: #e6eef8;
+    font-size: 0.9rem;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+  }
+  @media (max-width: 992px) {
+    .chart-card { min-height: 220px; }
+    .chart-small { height: 220px; }
+  }
+</style>
+
+<div class="row g-3">
+
+  <!-- LEFT column: still small stats column -->
+  <div class="col-12 col-lg-3">
+    <div class="card p-3 mb-3">
+      <h6 class="mb-1">Total Attempts</h6>
+      <h2 class="mb-0">{{ total }}</h2>
+      <div class="small-muted mt-2">Recent attacks logged</div>
+    </div>
+
+    <div class="card p-3 mb-3">
+      <h6 class="mb-2">Top IPs</h6>
+      <ul class="list-unstyled mb-0">
+        {% for ip, c in top_ips %}
+          <li><strong>{{ ip }}</strong> <span class="muted">→ {{ c }}</span></li>
+        {% else %}
+          <li class="muted">No data</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card p-3">
+      <h6 class="mb-2">Quick Controls</h6>
+      <div class="d-grid gap-2">
+        <a class="btn btn-sm btn-success" href="/export/csv">Export CSV</a>
+        <a class="btn btn-sm btn-primary" href="/export/json">Export JSON</a>
+        <a class="btn btn-sm btn-warning" href="/export/excel">Export Excel</a>
+      </div>
+      <div class="small-muted mt-2">Auto-refresh map every 10s</div>
+    </div>
+  </div>
+
+  <!-- CENTER column: Wide hero map + charts -->
+  <div class="col-12 col-lg-6">
+
+    <!-- HERO MAP (FULL WIDTH of center column) -->
+    <div class="card p-0 mb-3 hero-map position-relative">
+      <div class="map-legend">
+        <strong>Attack Map</strong> • Click markers for details • <span id="map-status" class="muted small-muted">loading...</span>
+      </div>
+      <div id="main-map" style="height:450px;"></div>
+    </div>
+
+    <!-- CHART ROW (two charts side-by-side) -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-6">
+        <div class="card p-3 chart-card">
+          <h6>Username Distribution</h6>
+          <canvas id="usernameChart" class="chart-small"></canvas>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="card p-3 chart-card">
+          <h6>Password Frequency</h6>
+          <canvas id="passwordChart" class="chart-small"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hourly attacks full-width -->
+    <div class="card p-3 mb-3">
+      <h6>Attacks by Hour</h6>
+      <canvas id="hourChart" class="chart-wide"></canvas>
+    </div>
+  </div>
+
+  <!-- RIGHT column: lists and small controls -->
+  <div class="col-12 col-lg-3">
+    <div class="card p-3 mb-3">
+      <h6>Top Usernames</h6>
+      <ul class="list-unstyled mb-0">
+        {% for u, c in top_users %}
+          <li>{{ u }} <span class="muted">→ {{ c }}</span></li>
+        {% else %}
+          <li class="muted">No data</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card p-3 mb-3">
+      <h6>Top Passwords</h6>
+      <ul class="list-unstyled mb-0">
+        {% for p, c in top_pwds %}
+          <li>{{ p }} <span class="muted">→ {{ c }}</span></li>
+        {% else %}
+          <li class="muted">No data</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card p-3">
+      <h6>Filters</h6>
+      <form method="get" class="row gx-2 gy-2">
+        <div class="col-12"><input class="form-control form-control-sm" name="ip" placeholder="Filter IP" value="{{ q_ip }}"></div>
+        <div class="col-12"><input class="form-control form-control-sm" name="country" placeholder="Filter Country" value="{{ q_country }}"></div>
+        <div class="col-12"><input class="form-control form-control-sm" name="username" placeholder="Filter Username" value="{{ q_user }}"></div>
+        <div class="col-6"><input class="form-control form-control-sm" name="limit" placeholder="Limit" value="{{ q_limit }}"></div>
+        <div class="col-6 d-grid"><button class="btn btn-sm btn-primary">Apply</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- RECENT ATTEMPTS TABLE (full width below) -->
+<div class="card mt-4 p-3">
+  <h6>Recent Attempts</h6>
+  <div class="table-responsive">
+    <table class="table table-dark table-striped align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>IP</th>
+          <th>Country</th>
+          <th>City</th>
+          <th>Org</th>
+          <th>Username</th>
+          <th>Password</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in recent %}
+        <tr>
+          <td>{{ e.time }}</td>
+          <td>{{ e.ip }}</td>
+          <td>{{ e.country }}</td>
+          <td>{{ e.city }}</td>
+          <td>{{ e.org }}</td>
+          <td>{{ e.username }}</td>
+          <td>{{ e.password }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">No attempts yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js already included in base.html -->
+<!-- Leaflet CSS/JS + heat plugin -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<script>
+// --------------------------- Charts ---------------------------
+function makeCharts() {
+  // Username (pie)
+  const userCtx = document.getElementById('usernameChart').getContext('2d');
+  const usernameChart = new Chart(userCtx, {
+    type: 'pie',
+    data: {
+      labels: {{ username_labels | tojson }},
+      datasets: [{ data: {{ username_values | tojson }} }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } } }
+  });
+
+  // Password (bar)
+  const passCtx = document.getElementById('passwordChart').getContext('2d');
+  const passwordChart = new Chart(passCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ password_labels | tojson }},
+      datasets: [{ data: {{ password_values | tojson }}, backgroundColor:'#3b82f6' }]
+    },
+    options: { responsive: true, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{ color:'#cbd5e1' }}, y:{ ticks:{ color:'#cbd5e1' } } } }
+  });
+
+  // Hourly attacks (line)
+  const hourCtx = document.getElementById('hourChart').getContext('2d');
+  const hourChart = new Chart(hourCtx, {
+    type: 'line',
+    data: {
+      labels: {{ hour_labels | tojson }},
+      datasets: [{ label: 'Attacks', data: {{ hour_values | tojson }}, fill: true, tension: 0.3, backgroundColor: 'rgba(59,130,246,0.12)', borderColor:'#3b82f6', pointRadius:3 }]
+    },
+    options: { responsive:true, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{ color:'#cbd5e1' }}, y:{ ticks:{ color:'#cbd5e1' } } } }
+  });
+}
+
+// draw charts once
+makeCharts();
+
+// --------------------------- Map ---------------------------
+let map = L.map('main-map', { preferCanvas: true }).setView([20, 0], 2);
+
+// tiles
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 8,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+let markersLayer = L.layerGroup().addTo(map);
+let circlesLayer = L.layerGroup().addTo(map);
+let heatLayer = L.heatLayer([], { radius: 25, blur: 18, maxZoom: 6 });
+let heatOn = false;
+
+function radiusFromCount(n) {
+  return Math.max(6, Math.min(60, 6 + Math.pow(n, 0.7) * 4));
+}
+
+async function updateMap() {
+  try {
+    document.getElementById('map-status').innerText = 'updating...';
+    const res = await fetch('/mapdata');
+    if (!res.ok) { document.getElementById('map-status').innerText = 'error'; return; }
+    const obj = await res.json();
+    const data = obj.data;
+
+    markersLayer.clearLayers();
+    circlesLayer.clearLayers();
+    heatLayer.setLatLngs([]);
+
+    let heatPoints = [];
+
+    for (const it of data) {
+      const { ip, lat, lon, count, country, city, org, usernames, passwords, last_seen } = it;
+      if (!lat || !lon) continue;
+
+      const popupHtml = `
+        <div style="font-size:0.9rem">
+          <b>${ip}</b><br/>
+          ${country} — ${city}<br/>
+          ${org}<br/>
+          Attempts: ${count}<br/>
+          Last: ${last_seen}<br/>
+          <b>Usernames:</b> ${usernames.join(', ')}<br/>
+          <b>Passwords:</b> ${passwords.join(', ')}
+        </div>
+      `;
+
+      const marker = L.marker([lat, lon]);
+      marker.bindPopup(popupHtml);
+      markersLayer.addLayer(marker);
+
+      const circle = L.circleMarker([lat, lon], {
+        radius: radiusFromCount(count),
+        color: '#ff6b6b',
+        fillColor: '#ff6b6b',
+        fillOpacity: 0.35,
+        weight: 1
+      });
+      circle.bindPopup(popupHtml);
+      circlesLayer.addLayer(circle);
+
+      heatPoints.push([lat, lon, Math.max(0.5, Math.log(count + 1))]);
+    }
+
+    if (heatPoints.length) {
+      heatLayer.setLatLngs(heatPoints);
+      if (heatOn) heatLayer.addTo(map);
+    }
+
+    document.getElementById('map-status').innerText = new Date(obj.now * 1000).toLocaleTimeString();
+  } catch (e) {
+    console.log("map update error", e);
+    document.getElementById('map-status').innerText = 'error';
+  }
+}
+
+// heat toggle in hero legend
+const legendBtn = document.querySelector('.map-legend');
+legendBtn.addEventListener('click', (ev) => {
+  // clicking legend not required — create button below if desired
+});
+
+// small control: click on legend toggles heat (optional)
+(function addHeatToggleButton(){
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-sm btn-outline-light';
+  btn.style.marginLeft = '8px';
+  btn.innerText = 'Toggle Heat';
+  btn.onclick = () => {
+    heatOn = !heatOn;
+    if (heatOn) {
+      heatLayer.addTo(map);
+      btn.innerText = 'Heat ON';
+    } else {
+      map.removeLayer(heatLayer);
+      btn.innerText = 'Toggle Heat';
+    }
+  };
+  document.querySelector('.map-legend').appendChild(btn);
+})();
+
+// initial load + periodic updates
+updateMap();
+setInterval(updateMap, 10000);
+
+// zoom-to-marker helper (optional): when clicking a top-ip entry you could center map
+// e.g., add data-ip attributes to top-ips list items and call map.setView(...)
+</script>
+{% endblock %}
+
